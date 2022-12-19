@@ -2,11 +2,19 @@
 
 **Learning objectives:**
 
-- How to make functions in R
-- What are the parts of a function
-- Nested functions
+- Discuss the basic components of a function
+- Observe ways to compose a function 
+- Discuss the rules of lexical scoping
+- Highlight the properties of lazy evaluation
+- Overview the tools available to exit out of a function
+- Overview the three forms used to compose functions 
 
 ## How to make a simple function in R
+
+```{r, setup, include=FALSE}
+library(ggplot2)
+library(magrittr)
+```
 
 Let's imagine the structure of a function:
 
@@ -14,10 +22,13 @@ Let's imagine the structure of a function:
 knitr::include_graphics("images/06_functions.png")
 ```
 
-
 **Function components**
 
-Functions have three parts, `formals()`, `body()`, and `environment()`.
+Functions have three parts:
+
+* `formals()`
+* `body()`
+* `environment()`.
 
 ```{r 06-c01, echo=FALSE, fig.align='center', fig.dim="100%"}
 DiagrammeR::mermaid("
@@ -36,19 +47,20 @@ library(tidyverse)
 ```
 
 ```{r}
-coffee_ratings%>%slice(1:3)%>%select(1:5)
+coffee_ratings %>%
+  slice(1:3) %>%
+  select(1:5)
 ```
 
 ```{r, function_example}
-avg_points <- function(species){
+avg_points <- function(species) {
   # this function is for calculating the mean
-  avg <-  coffee_ratings %>% 
-  filter(species == species) %>% 
+  avg <-  coffee_ratings %>%
+  filter(species == species) %>%
   summarise(mean = mean(total_cup_points))
-  
+
   return(avg)
 }
-
 ```
 
 ```{r}
@@ -59,7 +71,6 @@ avg_points("Arabica")
 formals(avg_points)
 ```
 
-
 ```{r}
 body(avg_points)
 ```
@@ -68,14 +79,19 @@ body(avg_points)
 environment(avg_points)
 ```
 
-Functions uses attributes, one attribute used by base R is `srcref`, short for **source reference**. It points to the source code used to create the function. It contains code comments and other formatting.
+* Functions uses attributes just like other objects.
+* One attribute used by base R is `srcref`, short for **source reference**. 
+* `srcref` points to the source code used to create the function. It contains code comments and other formatting.
+
 ```{r}
 attr(avg_points, "srcref")
 ```
 
 ## Primitive functions
 
-Are the core function in base R, such as `sum()`
+* Written in C code.
+* Core functions in base R, such as `sum()`
+
 ```{r}
 sum
 ```
@@ -87,19 +103,46 @@ Type of primitives:
 
 ```{r}
 typeof(sum)
+typeof(`[`)
+typeof(`<-`)
 ```
 
+* Why is this important?
+  * These core functions have components that return `NULL`.
 
-These core functions have components to NULL.
+```{r}
+formals(sum)
+body(sum)
+environment(sum)
+```
+
+## First-class functions
+
+* R functions are objects in their own right.
+* No special syntax is required to define or name a function.
+* Simply use the function `function`.
+* Bind it to a name using `<-`.
+
+```{r}
+one <- function() {
+  x <- 1
+  return(x)
+}
+
+one()
+```
 
 ## Anonymous functions
 
-If you don't provide a name to a function
+* Cases where you don't provide a name to a function.
 
 ```{r}
-lapply(mtcars%>%select(mpg,cyl), function(x) length(unique(x)))
+lapply(mtcars %>% select(mpg, cyl), function(x) length(unique(x)))
+# As of 4.1.0
+lapply(mtcars %>% select(mpg, cyl), \(x) length(unique(x)))
+# Using a map function
+map(mtcars, \(.x) print(max(.x)))
 ```
-
 
 ```{r}
 vector_len <- function(x) {
@@ -108,24 +151,42 @@ vector_len <- function(x) {
 ```
 
 ```{r}
-lapply(mtcars%>%select(mpg,cyl), vector_len)
+lapply(mtcars %>% select(mpg, cyl), vector_len)
 ```
 
-**Invoking a function**
+* Functions in a list.
 
 ```{r}
-args <- unique(coffee_ratings$species) %>% 
-  `[[`(1) %>% 
-  as.list()
-  
-  
-  
-do.call(avg_points, args)
+funs <- list(
+  bar = function(x) ggplot(x, aes(cyl, mpg)) + geom_col(),
+  point = function(x) ggplot(x, aes(wt, mpg)) + geom_point()
+)
+funs$point(mtcars)
+funs$bar(mtcars)
 ```
 
+## Invoking a function
 
+* Most likely we're familiar with the following form:
+
+```{r}
+runif(1:10, 0, 100)
+```
+
+* Less familiar, arguments in a data structure.
+* Not sure why you would do this, though?
+
+```{r}
+args <- list(1:10, min = 0, max = 100)
+
+do.call(runif, args)
+```
 
 ## Function composition
+
+* Nest the function calls:
+  * Good for simple code 
+  * Becomes hard to read when nesting is complex
 
 ```{r}
 square <- function(x) x^2
@@ -133,6 +194,10 @@ deviation <- function(x) x - mean(x)
 x <- runif(100)
 sqrt(mean(square(deviation(x))))
 ```
+
+* Save the intermediate results as variables:
+  * You have to name each step
+  * Clutters up the environment with objects
 
 ```{r}
 out <- deviation(x)
@@ -142,6 +207,9 @@ out <- sqrt(out)
 out
 ```
 
+* Piping
+  * Easier to read
+  * Only applicable when you have linear sequences or transformations
 
 ```{r}
 x %>%
@@ -149,83 +217,367 @@ x %>%
   square() %>%
   mean() %>%
   sqrt()
+
+# As of 4.1.0
+x |>
+  deviation() |>
+  square() |>
+  mean() |>
+  sqrt()
 ```
 
 ## More about functions insights
 
 ### Lexical scoping
 
+> Scope refers to the places in a program where a variable is visible and can be referenced. 
+> - From Ming-Ho Yee [here](https://prl.ccs.neu.edu/blog/2019/09/05/lexical-and-dynamic-scope/)
+
+> Lexical scoping, the scope of a variable is determined by the lexical (i.e., textual) structure of a program.
+> - From Ming-Ho Yee [here](https://prl.ccs.neu.edu/blog/2019/09/05/lexical-and-dynamic-scope/)
+
 **Rules**
 
-- Name masking
-- Functions versus variables
-- A fresh start
-- Dynamic lookup
+* Name masking - names defined in a function mask names defined outside a function.
+* Functions versus variables - name masking also applies to functions
+* A fresh start - each execution of the function creates a new environment. Functions are not smart enough to know what happened in the past.
+* Dynamic lookup - R looks for values when the function is run, not when the function is created.
 
+* Example taken from blog posts linked above:
+
+```{r, eval=FALSE}
+x <- 1
+f <- function() x
+g <- function() {
+  x <- 2
+  f()
+}
+g() # what does this return?
+```
 
 **Debugging**
 
-This function 
+* This function 
+
 ```{r}
 g12 <- function() x + 1
 x <- 15
 g12()
 ```
 
-
 ```{r}
 codetools::findGlobals(g12)
 ```
 
-You can change the function’s environment to an environment which contains nothing:
+* You can change the function’s environment to an environment which contains nothing:
+
 ```{r}
-# environment(g12) <- emptyenv()
-# g12()
-# Error in x + 1 : could not find function "+"
+environment(g12) <- emptyenv()
+g12()
 ```
 
+## Lazy evaluation
 
-### ... (dot-dot-dot)
+* Function arguments only evaluate if accessed.
 
-**Example**
+```{r}
+h01 <- function(x) {
+  10
+}
+
+h01(stop("This is an error!"))
+```
+
+* Lazy evaluation is powered by a data structure called a promise.
+* Lazy evaluation allows for functions to have default arguments.
+* Lazy evaluation provides flexibility to create functions that have long running computations.
+
+```{r}
+h04 <- function(x = 1, y = x * 2, z = a + b) {
+  a <- 10
+  b <- 100
+
+  c(x, y, z)
+}
+
+h04()
+```
+
+* The book suggests not doing this, even though some base R functions do.
+
+## ... (dot-dot-dot)
+
+* General example
 
 ```{r}
 i01 <- function(y, z) {
   list(y = y, z = z)
 }
+
 i02 <- function(x, ...) {
   i01(...)
 }
+
 str(i02(x = 1, y = 2, z = 3))
 #> List of 2
 #>  $ y: num 2
 #>  $ z: num 3
 ```
 
-### Exiting a function
+* Applied example
 
-1. Implicit or explicit returns
+```{r}
+scatter_plot <- function(...) {
+  ggplot(mtcars, aes(...)) +
+    geom_point()
+}
 
-2. Invisibility (`<-` most famous function that returns an invisible value)
+scatter_plot(y = mpg, x = wt)
+scatter_plot(y = mpg, x = disp)
+```
+
+* There's additional uses of the `...`
+  1. If your function takes a function as an argument, you'll want some way to pass additional arguments to that function.
+  2. If your function is an S3 generic, you need some way to all methods to take arbitrary extra arguments.
+* The book mentions we'll come back to these topics, so not much else on it for now.
+
+* Downsides to using the `...`
+  1. When used to pass arguments to other functions, you have to explain to the user where they go.
+  2. A misspelled argument will not raise an error.
+
+```{r}
+# Misspelling does not result in an error
+sum(1, 2, NA, na_rm = TRUE)
+```
+
+## Exiting a function
+
+1. Implicit or explicit returns.
+
+2. Invisibility (`<-` most famous function that returns an invisible value).
 
 3. `stop()` to stop a function with an error.
 
-4. Exit handlers
+4. Exit handlers.
 
+## Implicit vs. Explicit
 
-### Function forms
+* Implicit return: the last value from the function is returned
 
->Everything that exists is an object.
-Everything that happens is a function call.
-— John Chambers
+```{r}
+j01 <- function(x) {
+  if (x < 10) {
+    0
+  } else {
+    10
+  }
+}
+j01(5)
+j01(15)
+```
+
+* Explicit: use the `return()` function to explicitly return a value
+
+```{r}
+j02 <- function(x) {
+  if (x < 10) {
+    return(0)
+  } else {
+    return(10)
+  }
+}
+j02(5)
+j02(15)
+```
+
+## Invisible values
+
+* Most functions will print the result of a function (visible).
+* Prevent this printing by applying `invisible`.
+
+```{r}
+j04 <- function() invisible(1)
+j04()
+# to verify it works
+str(withVisible(j04()))
+```
+
+* Most common invisible function is the `<-`.
+* This characteristic makes it possible to chain assignments.
+
+```{r}
+a <- b <- c <- d <- 2
+```
+
+## Errors
+
+* Most of us have seen and worked with errors before. 
+* `stop()` can be used to immediately terminate execution in the case of a failed state.
+* An error should communicate there is a problem that the user needs to fix.
+
+```{r, eval=FALSE}
+j05 <- function() {
+  stop("I'm an error")
+  return(10)
+}
+j05()
+```
+
+## Exit handlers
+
+* Sometimes functions need to make temporary changes to the global state.
+* Functions should always clean up after themselves.
+* This is where `on.exit()` comes into play.
+* Exit handlers will run regardless of whether the function exits normally or with an error.
+
+```{r, eval=FALSE}
+j06 <- function(x) {
+  cat("Hello\n")
+  on.exit(cat("Goodbye!\n"), add = TRUE)
+  
+  if (x) {
+    return(10)
+  } else {
+    stop("Error")
+  }
+}
+
+j06(TRUE)
+
+j06(FALSE)
+```
+
+* `on.exit()` is useful when we need to clean up after a function run.
+
+```{r}
+cleanup <- function(dir, code) {
+  old_dir <- setwd(dir)
+  on.exit(setwd(old_dir), add = TRUE)
+
+  old_opt <- options(stringsAsFactors = FALSE)
+  on.exit(options(old_opt), add = TRUE)
+}
+```
+
+## Function forms
+
+> Everything that exists is an object.
+> Everything that happens is a function call.
+> — John Chambers
 
 
 ```{r echo=FALSE}
 knitr::include_graphics("images/06_forms.png")
 ```
 
----
+> An interesting property of R is that every infix, replacement, or special form can be rewritten in prefix form.
 
+* A few simple examples:
+
+```{r, eval=FALSE}
+# infix
+x + y
+# prefix
+`+`(x, y)
+
+# replacement
+names(df) <- c("x", "y", "z")
+# prefix
+`names<-`(df, c("x", "y", "z"))
+
+# special
+for (i in 1:10) print(i)
+# prefix
+`for`(i, 1:10, print(i))
+```
+
+## Prefix form
+
+* Most common function form used in R.
+* Prefix is special because you can specify arguments in three ways:
+  1. By position, `help(mean)`
+  2. Partial matching, `help(top = mean)`
+  3. By name, `help(topic = mean)`
+* Some rules to follow:
+  1. Use positional matching for the first one or two arguments.
+  2. Avoid positional matching for less commonly used arguments.
+  3. Never use partial matching.
+
+## Infix form
+
+* Gets its name because the function goes between the arguments.
+* Another way to think about it, `a func b`.
+* R has a bunch of built-in infix operators.
+* We can define our own:
+
+```{r}
+`%+%` <- function(a, b) paste0(a, b)
+"new" %+% "string"
+```
+
+* Examples from Colin Fay in the blog post [here](https://colinfay.me/playing-r-infix-functions/#:~:text=What%20are%20infix%20functions%3F,%2C%20%2B%20%2C%20and%20so%20on.).
+
+```{r}
+1:10
+`:`(1,10)
+2+3
+`+`(2,3)
+```
+
+* You have total freedom to redefine any infix functions:
+
+```{r}
+# Warning : don't try this at home
+`+` <- function(a,b){a*b}
+2 + 10
+
+`<-` <- .Primitive("+")
+2 <- 3
+
+# Restore cosmic ordeR
+`<-` = .Primitive("<-")
+`+` <- .Primitive("+")
+```
+
+* You can use any character between the `%`, even emojis.
+
+```{r}
+`%🍕%` <- dplyr::slice
+iris %🍕% 2
+```
+
+## Replacement functions
+
+* Act like they modify their arguments in place.
+* Have the special name `xxx<-`.
+* Must have arguments `x` and `value`.
+* Must return the modified object.
+
+```{r}
+`second<-` <- function(x, value) {
+  x[2] <- value
+  x
+}
+```
+
+* Are used by placing the function call on the left side of `<-`.
+
+```{r}
+x <- 1:10
+second(x) <- 5L
+x
+second(x) <- 10L
+x
+```
+
+## Special forms
+
+* The definition of parentheses (see `?`(``)
+* Subsetting operators (see `?`[[``)
+* Tools used in control flow (see `?`if``)
+* Definition of `function` (see `?`function``)
+
+---
 
 ## Case Study: SIR model function
 
