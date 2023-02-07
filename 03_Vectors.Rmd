@@ -2,14 +2,17 @@
 
 **Learning objectives:**
 
--   Learn about different types of vectors
--   Learn how these types relate to one another
+- Discuss different vector types 
+- Observe how to create, coerce, and test different vector types
+- Learn how these types relate to one another
 
 ## Types of vectors
 
 The family tree of vectors:
 
-![](images/vectors/summary-tree.png) Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
+![](images/vectors/summary-tree.png) 
+
+Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
 
 -   **Atomic.** Elements all the same type.
 -   **List.** Elements are different Types.
@@ -22,7 +25,9 @@ The family tree of vectors:
 -   The vector family tree revisited.
 -   Meet the children of atomic vectors
 
-![](images/vectors/summary-tree-atomic.png) Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
+![](images/vectors/summary-tree-atomic.png) 
+
+Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
 
 ### Length one
 
@@ -105,7 +110,7 @@ For most computations, an operation over values that includes a missing value yi
 
 ```{r na_contagion}
 # contagion
-5*NA
+5 * NA
 sum(c(1, 2, NA, 3))
 
 # innoculate
@@ -128,7 +133,7 @@ But this does matter for operations where types matter like `dplyr::if_else()`.
 
 ### Testing
 
-**What type of vector `is.*`() it?**
+**What type of vector `is.*`() it?***
 
 Test data type:
 
@@ -158,7 +163,6 @@ rlang::is_vector(list(1, 2))
 # atomic
 rlang::is_atomic(c(1, 2))
 rlang::is_atomic(list(1, "a"))
-
 ```
 
 See more [here](https://rlang.r-lib.org/reference/type-predicates.html)
@@ -299,7 +303,7 @@ names(two) <- c("one", "two", "three")
 # 3. By setting names--with base R
 three <- c(1, 2, 3)
 stats::setNames(
-  object = three, 
+  object = three,
   nm = c("One", "Two", "Three")
 )
 
@@ -326,7 +330,9 @@ matrix(1:6, nrow = 2, ncol = 3)
 -   The vector family tree revisited.
 -   Meet the children of typed atomic vectors
 
-![](images/vectors/summary-tree-s3-1.png) Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
+![](images/vectors/summary-tree-s3-1.png) 
+
+Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
 
 This list could (more easily) be expanded to new vector types with [`{vctrs}`](https://vctrs.r-lib.org/). See [rstudio::conf(2019) talk on the package around 18:27](https://www.rstudio.com/resources/rstudioconf-2019/vctrs-tools-for-making-size-and-type-consistent-functions/). See also [rstudio::conf(2020) talk on new vector types for dealing with non-decimal currencies](https://www.rstudio.com/resources/rstudioconf-2020/vctrs-creating-custom-vector-classes-with-the-vctrs-package/).
 
@@ -549,7 +555,9 @@ rlang::is_vector(list_comb2)
 -   The vector family tree revisited.
 -   Meet the children of lists
 
-![](images/vectors/summary-tree-s3-2.png) Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
+![](images/vectors/summary-tree-s3-2.png) 
+
+Credit: [Advanced R](https://adv-r.hadley.nz/index.html) by Hadley Wickham
 
 ### Data frame
 

@@ -443,8 +443,14 @@ j06 <- function(x) {
 }
 
 j06(TRUE)
+# Hello
+# Goodbye!
+# [1] 10
 
 j06(FALSE)
+# Hello
+# Error in j06(FALSE) : Error
+# Goodbye!
 ```
 
 * `on.exit()` is useful when we need to clean up after a function run.
@@ -462,7 +468,9 @@ cleanup <- function(dir, code) {
 ## Function forms
 
 > Everything that exists is an object.
+
 > Everything that happens is a function call.
+
 > — John Chambers
 
 
